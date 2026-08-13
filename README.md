@@ -109,6 +109,34 @@ Product management (all routes require authentication). Products are
 - `application/views/products/*` — list, create, edit and the shared `_form` partial
 - `application/database/schema.sql` — `categories` and `products` tables (with seed categories)
 
+## Inventory
+
+Warehouse inventory management (all routes require authentication). Stock is
+stored per warehouse/product pair in `warehouse_stock`; this feature only
+**reads** quantities — it never writes stock.
+
+| Route                          | Description                                   |
+| ------------------------------ | --------------------------------------------- |
+| `/inventory`                   | Inventory listing, filterable by warehouse    |
+| `/inventory/warehouses`        | Warehouse list                                |
+| `/inventory/warehouses/create` | Add-warehouse form                            |
+| `/inventory/warehouses/store`  | Save a new warehouse (POST, CSRF protected)   |
+| `/inventory/product/{w}/{p}`   | Quantity of a product in a warehouse          |
+
+- Warehouse names are required, trimmed, unique and at most 100 characters.
+- The warehouse filter is GET-based (`/inventory?warehouse_id=1`) and the
+  selected warehouse stays selected after filtering.
+- A warehouse/product pair without a `warehouse_stock` record shows quantity
+  `0` — viewing never creates a stock record.
+
+### Key files
+
+- `application/controllers/Inventory.php` — inventory, warehouse list, create/store
+- `application/models/Warehouse_model.php` — all `warehouses` table access
+- `application/models/Inventory_model.php` — read-only `warehouse_stock` queries
+- `application/views/inventory/*` — inventory, warehouse list, add-warehouse form, product quantity
+- `application/database/schema.sql` — `warehouses` and `warehouse_stock` tables (with seed data)
+
 ## Testing
 
 Manual smoke tests:

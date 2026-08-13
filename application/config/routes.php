@@ -74,3 +74,14 @@ $route['products/store'] = 'products/store';
 $route['products/edit/(:num)'] = 'products/edit/$1';
 $route['products/update/(:num)'] = 'products/update/$1';
 $route['products/disable/(:num)'] = 'products/disable/$1';
+
+/*
+| -------------------------------------------------------------------------
+| INVENTORY ROUTES
+| -------------------------------------------------------------------------
+*/
+$route['inventory'] = 'inventory/index';
+$route['inventory/warehouses'] = 'inventory/warehouses';
+$route['inventory/warehouses/create'] = 'inventory/create_warehouse';
+$route['inventory/warehouses/store'] = 'inventory/store_warehouse';
+$route['inventory/product/(:num)/(:num)'] = 'inventory/product/$1/$2';

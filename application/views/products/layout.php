@@ -1,7 +1,7 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * App shell shared by all products pages.
+ * App shell shared by the products and inventory pages.
  *
  * Renders the application header, flash messages and the content view
  * named by `$content_view`. Only the explicit `$content_data` array is
@@ -30,9 +30,15 @@ $username = isset($user) && $user !== NULL ? $user->username : '';
 					</div>
 					<span class="text-base font-semibold tracking-tight text-slate-900">Mini ERP</span>
 				</a>
+				<?php
+				$active_nav = $this->router->fetch_class();
+				$nav_active_class = 'text-sm font-semibold text-indigo-600';
+				$nav_default_class = 'text-sm font-medium text-slate-600 transition hover:text-slate-900';
+				?>
 				<nav class="ml-4 hidden items-center gap-4 sm:flex">
-					<a href="<?php echo site_url('dashboard'); ?>" class="text-sm font-medium text-slate-600 transition hover:text-slate-900">Dashboard</a>
-					<a href="<?php echo site_url('products'); ?>" class="text-sm font-semibold text-indigo-600">Products</a>
+					<a href="<?php echo site_url('dashboard'); ?>" class="<?php echo $active_nav === 'dashboard' ? $nav_active_class : $nav_default_class; ?>">Dashboard</a>
+					<a href="<?php echo site_url('products'); ?>" class="<?php echo $active_nav === 'products' ? $nav_active_class : $nav_default_class; ?>">Products</a>
+					<a href="<?php echo site_url('inventory'); ?>" class="<?php echo $active_nav === 'inventory' ? $nav_active_class : $nav_default_class; ?>">Inventory</a>
 				</nav>
 			</div>
 

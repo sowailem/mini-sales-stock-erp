@@ -143,3 +143,78 @@ INSERT IGNORE INTO products (name, code, category_id, price, is_active) VALUES
     ('LED Desk Lamp',                 'PRD-0020', (SELECT id FROM categories WHERE name = 'General'), 22.00, 1),
     ('Ergonomic Office Chair',        'PRD-0021', (SELECT id FROM categories WHERE name = 'General'), 89.00, 1),
     ('Paper Clips (Box)',             'PRD-0022', (SELECT id FROM categories WHERE name = 'General'),  2.20, 1);
+
+-- ============================================================
+-- Warehouses (inventory locations)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS warehouses (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
+    name VARCHAR(100) NOT NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+
+    UNIQUE KEY uk_warehouses_name (name)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Warehouse stock (current quantity per warehouse/product)
+-- ============================================================
+-- One row per warehouse/product pair; quantity is the current on-hand
+-- stock. No movements, batches, transfers or history are tracked.
+
+CREATE TABLE IF NOT EXISTS warehouse_stock (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
+    warehouse_id BIGINT UNSIGNED NOT NULL,
+    product_id BIGINT UNSIGNED NOT NULL,
+
+    quantity INT UNSIGNED NOT NULL DEFAULT 0,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+
+    UNIQUE KEY uk_warehouse_stock_pair (warehouse_id, product_id),
+
+    KEY idx_warehouse_stock_product_id (product_id),
+
+    CONSTRAINT fk_warehouse_stock_warehouse_id FOREIGN KEY (warehouse_id)
+        REFERENCES warehouses (id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_warehouse_stock_product_id FOREIGN KEY (product_id)
+        REFERENCES products (id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Seed data: sample warehouses
+-- ============================================================
+
+INSERT IGNORE INTO warehouses (name) VALUES
+    ('Main Warehouse'),
+    ('Second Warehouse');
+
+-- ============================================================
+-- Seed data: sample warehouse stock
+-- ============================================================
+-- Warehouses are resolved by name and products by code so the seed
+-- survives re-insertion with different IDs. The unique
+-- (warehouse_id, product_id) pair keeps INSERT IGNORE idempotent.
+
+INSERT IGNORE INTO warehouse_stock (warehouse_id, product_id, quantity) VALUES
+    ((SELECT id FROM warehouses WHERE name = 'Main Warehouse'),   (SELECT id FROM products WHERE code = 'PRD-0001'), 25),
+    ((SELECT id FROM warehouses WHERE name = 'Main Warehouse'),   (SELECT id FROM products WHERE code = 'PRD-0002'), 10),
+    ((SELECT id FROM warehouses WHERE name = 'Main Warehouse'),   (SELECT id FROM products WHERE code = 'PRD-0003'),  8),
+    ((SELECT id FROM warehouses WHERE name = 'Second Warehouse'), (SELECT id FROM products WHERE code = 'PRD-0001'),  8),
+    ((SELECT id FROM warehouses WHERE name = 'Second Warehouse'), (SELECT id FROM products WHERE code = 'PRD-0004'),  5),
+    ((SELECT id FROM warehouses WHERE name = 'Second Warehouse'), (SELECT id FROM products WHERE code = 'PRD-0009'), 12);
