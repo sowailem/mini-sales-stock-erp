@@ -524,7 +524,9 @@ class CI_Pagination {
 		}
 
 		// If something isn't quite right, back to the default base page.
-		if ( ! ctype_digit($this->cur_page) OR ($this->use_page_numbers && (int) $this->cur_page === 0))
+		// Cast to string: with query-string pagination, cur_page is NULL on
+		// the first page load, and ctype_digit(NULL) is deprecated in PHP 8.1+.
+		if ( ! ctype_digit((string) $this->cur_page) OR ($this->use_page_numbers && (int) $this->cur_page === 0))
 		{
 			$this->cur_page = $base_page;
 		}
