@@ -44,10 +44,10 @@ $username = isset($user) && $user !== NULL ? $user->username : '';
 		</div>
 
 		<div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-			<div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
+			<a href="<?php echo site_url('products'); ?>" class="block rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5 transition hover:bg-slate-50">
 				<h2 class="text-sm font-semibold text-slate-900">Products</h2>
-				<p class="mt-1 text-sm text-slate-500">Placeholder module</p>
-			</div>
+				<p class="mt-1 text-sm text-slate-500">Manage your product catalog</p>
+			</a>
 			<div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
 				<h2 class="text-sm font-semibold text-slate-900">Sales</h2>
 				<p class="mt-1 text-sm text-slate-500">Placeholder module</p>

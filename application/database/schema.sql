@@ -33,3 +33,72 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Categories (product categorization)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS categories (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
+    name VARCHAR(100) NOT NULL,
+
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+
+    UNIQUE KEY uk_categories_name (name)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Products
+-- ============================================================
+-- Products are deactivated (is_active = 0), never physically deleted,
+-- because they may be referenced by sales/inventory records.
+-- category_id is nullable so a deleted category does not cascade-delete
+-- its products; the application always assigns a valid category.
+
+CREATE TABLE IF NOT EXISTS products (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
+    name VARCHAR(150) NOT NULL,
+    code VARCHAR(50) NOT NULL,
+
+    category_id BIGINT UNSIGNED NULL,
+
+    price DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+
+    UNIQUE KEY uk_products_code (code),
+
+    KEY idx_products_category_id (category_id),
+    KEY idx_products_is_active (is_active),
+
+    CONSTRAINT fk_products_category_id FOREIGN KEY (category_id)
+        REFERENCES categories (id)
+        ON DELETE SET NULL
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Seed data: default categories
+-- ============================================================
+-- INSERT IGNORE keeps re-runs of this script idempotent.
+
+INSERT IGNORE INTO categories (name, is_active) VALUES
+    ('General', 1),
+    ('Food & Beverage', 1),
+    ('Electronics', 1),
+    ('Clothing', 1);

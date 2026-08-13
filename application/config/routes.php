@@ -62,3 +62,15 @@ $route['auth/signin'] = 'auth/signin';
 $route['auth/signup'] = 'auth/signup';
 $route['auth/signout'] = 'auth/signout';
 $route['dashboard'] = 'dashboard/index';
+
+/*
+| -------------------------------------------------------------------------
+| PRODUCTS ROUTES
+| -------------------------------------------------------------------------
+*/
+$route['products'] = 'products/index';
+$route['products/create'] = 'products/create';
+$route['products/store'] = 'products/store';
+$route['products/edit/(:num)'] = 'products/edit/$1';
+$route['products/update/(:num)'] = 'products/update/$1';
+$route['products/disable/(:num)'] = 'products/disable/$1';

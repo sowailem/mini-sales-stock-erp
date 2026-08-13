@@ -82,6 +82,33 @@ class Reports extends CI_Controller
 }
 ```
 
+## Products
+
+Product management (all routes require authentication). Products are
+**deactivated** (`is_active = 0`), never physically deleted.
+
+| Route                     | Description                                        |
+| ------------------------- | -------------------------------------------------- |
+| `/products`               | Paginated listing with search + category filter    |
+| `/products/create`        | Add-product form                                   |
+| `/products/store`         | Save a new product (POST, CSRF protected)          |
+| `/products/edit/{id}`     | Edit-product form                                  |
+| `/products/update/{id}`   | Save product changes (POST, CSRF protected)        |
+| `/products/disable/{id}`  | Deactivate a product (POST only, CSRF protected)   |
+
+- Search matches the product **name** or **code**; the category filter
+  combines with search, and pagination preserves both parameters.
+- Product codes must be unique; the price must be a valid non-negative
+  decimal; the category must exist and be active.
+- Pagination styling lives in `application/config/pagination.php`.
+
+### Key files
+
+- `application/controllers/Products.php` — list / create / store / edit / update / disable
+- `application/models/Product_model.php` — all `products` and `categories` access
+- `application/views/products/*` — list, create, edit and the shared `_form` partial
+- `application/database/schema.sql` — `categories` and `products` tables (with seed categories)
+
 ## Testing
 
 Manual smoke tests:
