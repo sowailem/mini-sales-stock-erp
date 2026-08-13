@@ -102,3 +102,44 @@ INSERT IGNORE INTO categories (name, is_active) VALUES
     ('Food & Beverage', 1),
     ('Electronics', 1),
     ('Clothing', 1);
+
+-- ============================================================
+-- Seed data: sample products
+-- ============================================================
+-- Categories are resolved by name so the seed survives category
+-- re-insertion with different IDs. Codes are unique, so INSERT IGNORE
+-- keeps re-runs of this script idempotent. A few products are seeded
+-- inactive to demonstrate the status badge and the Disable action.
+
+INSERT IGNORE INTO products (name, code, category_id, price, is_active) VALUES
+    -- Electronics
+    ('Arduino Uno R3',                'PRD-0001', (SELECT id FROM categories WHERE name = 'Electronics'),  24.90,  1),
+    ('USB-C Cable 2m',                'PRD-0002', (SELECT id FROM categories WHERE name = 'Electronics'),   9.50,  1),
+    ('Wireless Mouse',                'PRD-0003', (SELECT id FROM categories WHERE name = 'Electronics'),  15.00,  1),
+    ('Bluetooth Headphones',          'PRD-0004', (SELECT id FROM categories WHERE name = 'Electronics'),  49.99,  1),
+    ('LED Monitor 24"',               'PRD-0005', (SELECT id FROM categories WHERE name = 'Electronics'), 129.00,  1),
+    ('Mechanical Keyboard',           'PRD-0006', (SELECT id FROM categories WHERE name = 'Electronics'),  89.50,  1),
+    ('HD Webcam',                     'PRD-0007', (SELECT id FROM categories WHERE name = 'Electronics'),  39.90,  1),
+    ('Power Bank 10000mAh',           'PRD-0008', (SELECT id FROM categories WHERE name = 'Electronics'),  29.99,  1),
+    ('Phone Case (Legacy Model)',     'PRD-0024', (SELECT id FROM categories WHERE name = 'Electronics'),   7.50,  0),
+
+    -- Food & Beverage
+    ('Espresso Beans 1kg',            'PRD-0009', (SELECT id FROM categories WHERE name = 'Food & Beverage'), 19.99, 1),
+    ('Green Tea 100g',                'PRD-0010', (SELECT id FROM categories WHERE name = 'Food & Beverage'),  6.50, 1),
+    ('Olive Oil 750ml',               'PRD-0011', (SELECT id FROM categories WHERE name = 'Food & Beverage'), 12.75, 1),
+    ('Raw Honey 500g',                'PRD-0012', (SELECT id FROM categories WHERE name = 'Food & Beverage'),  8.99, 1),
+    ('Granola 400g',                  'PRD-0013', (SELECT id FROM categories WHERE name = 'Food & Beverage'),  5.25, 1),
+    ('Snack Mix (Discontinued)',      'PRD-0023', (SELECT id FROM categories WHERE name = 'Food & Beverage'),  3.75, 0),
+
+    -- Clothing
+    ('Cotton T-Shirt',                'PRD-0014', (SELECT id FROM categories WHERE name = 'Clothing'), 14.00, 1),
+    ('Denim Jacket',                  'PRD-0015', (SELECT id FROM categories WHERE name = 'Clothing'), 59.90, 1),
+    ('Wool Scarf',                    'PRD-0016', (SELECT id FROM categories WHERE name = 'Clothing'), 18.50, 1),
+    ('Running Sneakers',              'PRD-0017', (SELECT id FROM categories WHERE name = 'Clothing'), 45.00, 1),
+
+    -- General
+    ('A5 Notebook',                   'PRD-0018', (SELECT id FROM categories WHERE name = 'General'),  4.50, 1),
+    ('Ballpoint Pens (Pack of 10)',   'PRD-0019', (SELECT id FROM categories WHERE name = 'General'),  6.00, 1),
+    ('LED Desk Lamp',                 'PRD-0020', (SELECT id FROM categories WHERE name = 'General'), 22.00, 1),
+    ('Ergonomic Office Chair',        'PRD-0021', (SELECT id FROM categories WHERE name = 'General'), 89.00, 1),
+    ('Paper Clips (Box)',             'PRD-0022', (SELECT id FROM categories WHERE name = 'General'),  2.20, 1);
