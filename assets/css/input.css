@@ -8,7 +8,9 @@
 @import "tailwindcss";
 
 /*
- * Explicitly scan the application views (paths relative to this file),
- * so classes used in PHP templates are always detected.
+ * Explicitly scan the application views and JS files (paths relative to
+ * this file), so classes used in PHP templates and vanilla JS-built UI
+ * are always detected.
  */
 @source "../../application/views";
+@source "../../assets/js";

@@ -136,6 +136,44 @@ groups, notes or other CRM-style fields.
 - `application/views/customers/*` — list, create, edit and the shared `_form` partial
 - `application/database/schema.sql` — `customers` table
 
+## Sales
+
+Simple sales invoice creation (all routes require authentication). No CRM,
+accounting, payments or taxes — just a customer, a warehouse, a list of
+products and a discount.
+
+| Route                          | Description                                   |
+| ------------------------------ | --------------------------------------------- |
+| `/sales`                       | Recent invoices listing (paginated, searchable by invoice number or customer) |
+| `/sales/create`                | New Sale page (invoice builder)               |
+| `/sales/view/{id}`             | Single invoice with its line items            |
+| `/sales/search-products`       | AJAX product search (GET, JSON)               |
+| `/sales/store`                 | Save the invoice (POST, CSRF protected)       |
+
+- The invoice builder searches active products by name or code via AJAX and
+  builds the line items client-side; duplicate products merge into a single
+  line with the combined quantity. Search results show the current stock of
+  each product in the selected warehouse.
+- Every monetary value is recalculated server-side from the products' current
+  selling prices — totals submitted by the browser are never trusted. Prices,
+  quantities and the discount are all validated before anything is written.
+- The `sales` row, all of its `sale_items` and the warehouse stock deduction
+  happen inside a single database transaction, so any failure rolls back the
+  whole invoice — a partial invoice is never left behind.
+- Sold quantities are deducted from `warehouse_stock` for the chosen warehouse
+  when the invoice is saved. If the warehouse has no stock record for a product
+  or not enough quantity, the invoice is rejected with a clear error — stock
+  can never go negative.
+
+### Key files
+
+- `application/controllers/Sales.php` — new-sale form, AJAX search, store (validation + transaction)
+- `application/models/Sale_model.php` — all `sales` and `sale_items` inserts
+- `application/models/Product_model.php` — active-product search used by the AJAX lookup
+- `application/views/sales/create.php` — the invoice builder page
+- `assets/js/sales.js` — search dropdown, item rows, live totals, submit guard
+- `application/database/schema.sql` — `sales` and `sale_items` tables
+
 ## Inventory
 
 Warehouse inventory management (all routes require authentication). Stock is
@@ -180,3 +218,10 @@ Manual smoke tests:
    should be returned to `/dashboard`.
 6. **CSRF** — submit either form without the CSRF token (e.g. via curl) and
    confirm the request is rejected.
+7. **New sale** — sign in, open `/sales/create`, pick a customer and warehouse,
+   search for a product and add it, change its quantity, add a second product,
+   remove one, set a discount, then save. One row must appear in `sales` and
+   one in `sale_items` per product, with totals matching the server-side
+   calculation.
+8. **Invalid sale** — POST `/sales/store` without a customer, without items, or
+   with a quantity of 0 must be rejected without creating any `sales` row.

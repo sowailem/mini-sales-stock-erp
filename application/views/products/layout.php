@@ -39,6 +39,7 @@ $username = isset($user) && $user !== NULL ? $user->username : '';
 					<a href="<?php echo site_url('dashboard'); ?>" class="<?php echo $active_nav === 'dashboard' ? $nav_active_class : $nav_default_class; ?>">Dashboard</a>
 					<a href="<?php echo site_url('products'); ?>" class="<?php echo $active_nav === 'products' ? $nav_active_class : $nav_default_class; ?>">Products</a>
 					<a href="<?php echo site_url('customers'); ?>" class="<?php echo $active_nav === 'customers' ? $nav_active_class : $nav_default_class; ?>">Customers</a>
+					<a href="<?php echo site_url('sales'); ?>" class="<?php echo $active_nav === 'sales' ? $nav_active_class : $nav_default_class; ?>">Sales</a>
 					<a href="<?php echo site_url('inventory'); ?>" class="<?php echo $active_nav === 'inventory' ? $nav_active_class : $nav_default_class; ?>">Inventory</a>
 				</nav>
 			</div>

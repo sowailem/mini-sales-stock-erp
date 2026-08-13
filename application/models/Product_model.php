@@ -91,6 +91,50 @@ class Product_model extends CI_Model
 	}
 
 	/**
+	 * Get a single active product by ID. Only used by the sales feature
+	 * so an invoice can never reference a missing or disabled product.
+	 *
+	 * @param	int|string	$id
+	 * @return	object|NULL
+	 */
+	public function get_active_by_id($id)
+	{
+		return $this->db
+			->select('id, name, code, price')
+			->from($this->table)
+			->where('id', (int) $id)
+			->where('is_active', 1)
+			->get()
+			->row();
+	}
+
+	/**
+	 * Search active products by name or code for the sales AJAX product
+	 * lookup. LIKE is case-insensitive under the table's
+	 * utf8mb4_unicode_ci collation. Only a small page of results is
+	 * returned so the full catalog is never sent to the browser.
+	 *
+	 * @param	string	$term
+	 * @param	int		$limit	Maximum number of results
+	 * @return	array
+	 */
+	public function search_active_products($term, $limit = 10)
+	{
+		return $this->db
+			->select('id, name, code, price')
+			->from($this->table)
+			->group_start()
+			->like('products.name', $term)
+			->or_like('products.code', $term)
+			->group_end()
+			->where('products.is_active', 1)
+			->order_by('products.name', 'ASC')
+			->limit((int) $limit)
+			->get()
+			->result();
+	}
+
+	/**
 	 * Check whether a product code is already in use, optionally
 	 * excluding a given product (used when editing).
 	 *

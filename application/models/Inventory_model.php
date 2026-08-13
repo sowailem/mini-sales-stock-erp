@@ -4,9 +4,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 /**
  * Inventory_model
  *
- * Read-only inventory queries over the `warehouse_stock` table, joined
- * with `warehouses` and `products`. The inventory feature never writes
- * stock — quantities are only ever read.
+ * Inventory queries over the `warehouse_stock` table, joined with
+ * `warehouses` and `products`. The inventory feature only reads
+ * quantities; the sales feature deducts stock here when an invoice
+ * is saved.
  */
 class Inventory_model extends CI_Model
 {
@@ -71,5 +72,77 @@ class Inventory_model extends CI_Model
 			->row();
 
 		return $row !== NULL ? (int) $row->quantity : 0;
+	}
+
+	/**
+	 * Current stock quantities for a set of products in one warehouse.
+	 * Returns an array keyed by product ID; products without a stock
+	 * record are simply absent from the map (the caller defaults them
+	 * to 0).
+	 *
+	 * @param	int		$warehouse_id
+	 * @param	array	$product_ids	List of product IDs (int-cast)
+	 * @return	array
+	 */
+	public function get_stock_for_products($warehouse_id, $product_ids)
+	{
+		$stock = array();
+
+		if (empty($product_ids))
+		{
+			return $stock;
+		}
+
+		$rows = $this->db
+			->select('product_id, quantity')
+			->from($this->stock_table)
+			->where('warehouse_id', (int) $warehouse_id)
+			->where_in('product_id', $product_ids)
+			->get()
+			->result();
+
+		foreach ($rows as $row)
+		{
+			$stock[(int) $row->product_id] = (int) $row->quantity;
+		}
+
+		return $stock;
+	}
+
+	/**
+	 * Deduct the sold quantities of an invoice from a warehouse's
+	 * stock. Each line is decremented only while enough stock is left;
+	 * a missing stock record or insufficient quantity fails that line
+	 * and its product name is returned so the caller can reject and
+	 * roll back the whole invoice. Stock can therefore never go
+	 * negative.
+	 *
+	 * Note: the caller must run this inside a database transaction so
+	 * a failed deduction rolls back the invoice too.
+	 *
+	 * @param	int		$warehouse_id
+	 * @param	array	$items	Invoice items, each with product_id, quantity and name
+	 * @return	string|NULL	Product name that could not be deducted, or NULL on success
+	 */
+	public function deduct_stock($warehouse_id, $items)
+	{
+		foreach ($items as $item)
+		{
+			$this->db
+				->where('warehouse_id', (int) $warehouse_id)
+				->where('product_id', (int) $item['product_id'])
+				->where('quantity >=', (int) $item['quantity'])
+				->set('quantity', 'quantity - ' . (int) $item['quantity'], FALSE)
+				->update($this->stock_table);
+
+			// 0 affected rows means the pair has no record or not enough
+			// stock — either way the line cannot be fulfilled.
+			if ($this->db->affected_rows() !== 1)
+			{
+				return isset($item['name']) ? (string) $item['name'] : (string) $item['product_id'];
+			}
+		}
+
+		return NULL;
 	}
 }

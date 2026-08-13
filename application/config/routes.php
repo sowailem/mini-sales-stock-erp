@@ -96,3 +96,14 @@ $route['inventory/warehouses'] = 'inventory/warehouses';
 $route['inventory/warehouses/create'] = 'inventory/create_warehouse';
 $route['inventory/warehouses/store'] = 'inventory/store_warehouse';
 $route['inventory/product/(:num)/(:num)'] = 'inventory/product/$1/$2';
+
+/*
+| -------------------------------------------------------------------------
+| SALES ROUTES
+| -------------------------------------------------------------------------
+*/
+$route['sales'] = 'sales/index';
+$route['sales/create'] = 'sales/create';
+$route['sales/view/(:num)'] = 'sales/view/$1';
+$route['sales/search-products'] = 'sales/search_products';
+$route['sales/store'] = 'sales/store';

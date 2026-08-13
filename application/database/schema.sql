@@ -259,3 +259,78 @@ FROM (
 WHERE NOT EXISTS (
     SELECT 1 FROM customers c WHERE c.name = v.name
 );
+
+-- ============================================================
+-- Sales invoices
+-- ============================================================
+-- One row per invoice. Monetary columns are stored so an invoice can
+-- be re-displayed later, but they are always computed server-side from
+-- the individual line items — never trusted from the browser.
+-- customer_id and warehouse_id reference tables that never physically
+-- delete rows (customers/products are never removed), so RESTRICT is
+-- the safe default.
+
+CREATE TABLE IF NOT EXISTS sales (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
+    customer_id BIGINT UNSIGNED NOT NULL,
+    warehouse_id BIGINT UNSIGNED NOT NULL,
+
+    subtotal DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    discount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+
+    KEY idx_sales_customer_id (customer_id),
+    KEY idx_sales_warehouse_id (warehouse_id),
+
+    CONSTRAINT fk_sales_customer_id FOREIGN KEY (customer_id)
+        REFERENCES customers (id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_sales_warehouse_id FOREIGN KEY (warehouse_id)
+        REFERENCES warehouses (id)
+        ON DELETE RESTRICT
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Sales invoice items (line items)
+-- ============================================================
+-- One row per product on an invoice. price is the product's selling
+-- price at the time of the sale (copied from products.price) and total
+-- is the pre-computed line total (quantity x price). Quantities are
+-- always >= 1. Items cascade away with their invoice so a rollback or
+-- cleanup can never leave orphaned lines.
+
+CREATE TABLE IF NOT EXISTS sale_items (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
+    sale_id BIGINT UNSIGNED NOT NULL,
+    product_id BIGINT UNSIGNED NOT NULL,
+
+    quantity INT UNSIGNED NOT NULL,
+    price DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    total DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+
+    KEY idx_sale_items_sale_id (sale_id),
+    KEY idx_sale_items_product_id (product_id),
+
+    CONSTRAINT fk_sale_items_sale_id FOREIGN KEY (sale_id)
+        REFERENCES sales (id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_sale_items_product_id FOREIGN KEY (product_id)
+        REFERENCES products (id)
+        ON DELETE RESTRICT
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;
