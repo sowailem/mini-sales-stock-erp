@@ -235,3 +235,27 @@ CREATE TABLE IF NOT EXISTS customers (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- Seed data: sample customers
+-- ============================================================
+-- The customers table has no unique key, so INSERT IGNORE cannot
+-- make this idempotent. Instead each name is inserted only if it
+-- does not already exist, keeping re-runs of this script safe.
+-- A few customers have NULL phones to exercise the optional field.
+
+INSERT INTO customers (name, phone)
+SELECT v.name, v.phone
+FROM (
+    SELECT 'Acme Trading'           AS name, '+1 555-0101' AS phone
+    UNION ALL SELECT 'Globex Corporation',  '+1 555-0102'
+    UNION ALL SELECT 'Initech',             '+1 555-0103'
+    UNION ALL SELECT 'Umbrella Corp',       '+1 555-0104'
+    UNION ALL SELECT 'Stark Industries',    '+1 555-0105'
+    UNION ALL SELECT 'Wayne Enterprises',   NULL
+    UNION ALL SELECT 'Hooli',               '+1 555-0106'
+    UNION ALL SELECT 'Pied Piper',          NULL
+) AS v
+WHERE NOT EXISTS (
+    SELECT 1 FROM customers c WHERE c.name = v.name
+);
