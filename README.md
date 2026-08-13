@@ -109,6 +109,33 @@ Product management (all routes require authentication). Products are
 - `application/views/products/*` — list, create, edit and the shared `_form` partial
 - `application/database/schema.sql` — `categories` and `products` tables (with seed categories)
 
+## Customers
+
+Customer management (all routes require authentication). Intentionally
+minimal — only a name and an optional phone number; no addresses, emails,
+groups, notes or other CRM-style fields.
+
+| Route                     | Description                                        |
+| ------------------------- | -------------------------------------------------- |
+| `/customers`              | Customer listing                                    |
+| `/customers/create`       | Add-customer form                                   |
+| `/customers/store`        | Save a new customer (POST, CSRF protected)          |
+| `/customers/edit/{id}`    | Edit-customer form                                  |
+| `/customers/update/{id}`  | Save customer changes (POST, CSRF protected)        |
+
+- The name is required (at most 150 characters); the phone is optional
+  (at most 30 characters) and stored as NULL when left blank.
+- Non-existent or invalid customer IDs redirect back to the list with an
+  error flash message.
+- Customers are listed alphabetically by name.
+
+### Key files
+
+- `application/controllers/Customers.php` — list / create / store / edit / update
+- `application/models/Customer_model.php` — all `customers` table access
+- `application/views/customers/*` — list, create, edit and the shared `_form` partial
+- `application/database/schema.sql` — `customers` table
+
 ## Inventory
 
 Warehouse inventory management (all routes require authentication). Stock is

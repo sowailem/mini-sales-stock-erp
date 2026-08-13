@@ -218,3 +218,20 @@ INSERT IGNORE INTO warehouse_stock (warehouse_id, product_id, quantity) VALUES
     ((SELECT id FROM warehouses WHERE name = 'Second Warehouse'), (SELECT id FROM products WHERE code = 'PRD-0001'),  8),
     ((SELECT id FROM warehouses WHERE name = 'Second Warehouse'), (SELECT id FROM products WHERE code = 'PRD-0004'),  5),
     ((SELECT id FROM warehouses WHERE name = 'Second Warehouse'), (SELECT id FROM products WHERE code = 'PRD-0009'), 12);
+
+-- ============================================================
+-- Customers
+-- ============================================================
+-- Intentionally minimal: only a name and an optional phone number.
+-- No addresses, emails, groups, notes or other CRM-style fields.
+
+CREATE TABLE IF NOT EXISTS customers (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
+    name VARCHAR(150) NOT NULL,
+    phone VARCHAR(30) NULL,
+
+    PRIMARY KEY (id)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;

@@ -77,6 +77,17 @@ $route['products/disable/(:num)'] = 'products/disable/$1';
 
 /*
 | -------------------------------------------------------------------------
+| CUSTOMERS ROUTES
+| -------------------------------------------------------------------------
+*/
+$route['customers'] = 'customers/index';
+$route['customers/create'] = 'customers/create';
+$route['customers/store'] = 'customers/store';
+$route['customers/edit/(:num)'] = 'customers/edit/$1';
+$route['customers/update/(:num)'] = 'customers/update/$1';
+
+/*
+| -------------------------------------------------------------------------
 | INVENTORY ROUTES
 | -------------------------------------------------------------------------
 */
