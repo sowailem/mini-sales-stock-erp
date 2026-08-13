@@ -1,0 +1,16 @@
+/*
+ * Tailwind CSS v4 input file.
+ *
+ * Build with: npm run build:css
+ * The compiled output (assets/css/app.css) is committed so the application
+ * works out of the box without a Node build step in production.
+ */
+@import "tailwindcss";
+
+/*
+ * Explicitly scan the application views and JS files (paths relative to
+ * this file), so classes used in PHP templates and vanilla JS-built UI
+ * are always detected.
+ */
+@source "../../application/views";
+@source "../../assets/js";
