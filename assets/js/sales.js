@@ -35,21 +35,35 @@
 
 	var searchUrl = searchWrap.getAttribute('data-search-url') || 'sales/search-products';
 	var warehouseSelect = document.getElementById('warehouse_id');
+	// Warehouse users have no warehouse selector; the backend locks them
+	// to their assigned warehouse, which the page exposes here so the
+	// stock lookup is still per-warehouse.
+	var fixedWarehouseId = searchWrap.getAttribute('data-warehouse-id') || '';
 	var searchTimer = null;
 	var activeRequest = null;
 
+	function currentWarehouseId() {
+		if (warehouseSelect !== null) {
+			return warehouseSelect.value;
+		}
+
+		return fixedWarehouseId;
+	}
+
 	// Changing the warehouse changes the stock shown, so re-run an
 	// in-progress search against the newly selected warehouse.
-	warehouseSelect.addEventListener('change', function () {
-		var term = searchInput.value.trim();
+	if (warehouseSelect !== null) {
+		warehouseSelect.addEventListener('change', function () {
+			var term = searchInput.value.trim();
 
-		if (term.length >= 2) {
-			clearTimeout(searchTimer);
-			searchTimer = setTimeout(function () {
-				performSearch(term);
-			}, 250);
-		}
-	});
+			if (term.length >= 2) {
+				clearTimeout(searchTimer);
+				searchTimer = setTimeout(function () {
+					performSearch(term);
+				}, 250);
+			}
+		});
+	}
 
 	/* ------------------------------------------------------------------ *
 	 * Helpers
@@ -99,7 +113,7 @@
 
 		// Stock is per warehouse, so search the selected one (if any).
 		var url = searchUrl + '?q=' + encodeURIComponent(term);
-		var warehouseId = warehouseSelect.value;
+		var warehouseId = currentWarehouseId();
 
 		if (warehouseId !== '') {
 			url += '&warehouse_id=' + encodeURIComponent(warehouseId);
@@ -428,7 +442,7 @@
 
 	function validateForm() {
 		var customer = document.getElementById('customer_id').value;
-		var warehouse = document.getElementById('warehouse_id').value;
+		var warehouse = currentWarehouseId();
 		var rows = tbody.querySelectorAll('tr');
 		var discount = parseFloat(discountInput.value);
 

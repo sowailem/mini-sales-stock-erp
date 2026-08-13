@@ -41,10 +41,21 @@ $username = isset($user) && $user !== NULL ? $user->username : '';
 					<a href="<?php echo site_url('customers'); ?>" class="<?php echo $active_nav === 'customers' ? $nav_active_class : $nav_default_class; ?>">Customers</a>
 					<a href="<?php echo site_url('sales'); ?>" class="<?php echo $active_nav === 'sales' ? $nav_active_class : $nav_default_class; ?>">Sales</a>
 					<a href="<?php echo site_url('inventory'); ?>" class="<?php echo $active_nav === 'inventory' ? $nav_active_class : $nav_default_class; ?>">Inventory</a>
+					<?php if ($this->auth->is_admin()): ?>
+						<a href="<?php echo site_url('users'); ?>" class="<?php echo $active_nav === 'users' ? $nav_active_class : $nav_default_class; ?>">Users</a>
+					<?php endif; ?>
 				</nav>
 			</div>
 
 			<div class="flex items-center gap-4">
+				<?php if ($this->auth->is_warehouse_user()):
+					$assigned_warehouse = $this->auth->assigned_warehouse();
+					if ($assigned_warehouse !== NULL): ?>
+						<span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200">
+							<?php echo html_escape($assigned_warehouse->name); ?>
+						</span>
+					<?php endif;
+				endif; ?>
 				<span class="text-sm font-medium text-slate-600"><?php echo html_escape($username); ?></span>
 				<?php echo form_open('auth/signout', array('class' => 'inline', 'novalidate' => 'novalidate')); ?>
 					<button type="submit"

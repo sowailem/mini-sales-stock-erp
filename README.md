@@ -82,6 +82,59 @@ class Reports extends CI_Controller
 }
 ```
 
+## Permissions
+
+The application knows exactly two user types, stored directly on the
+`users` record (no roles/permissions/ACL tables):
+
+| Type             | `user_type`       | `warehouse_id`            | Access                                                      |
+| ---------------- | ----------------- | ------------------------- | ----------------------------------------------------------- |
+| Admin            | `admin`           | `NULL`                    | All warehouses, all inventory, sales for any warehouse       |
+| Warehouse user   | `user_warehouse`  | One valid warehouse ID    | Only the assigned warehouse's inventory and sales            |
+
+- Warehouse users are locked to their assigned warehouse on the
+  backend: URL parameters, POST fields and hidden form fields can never
+  widen their access, and every warehouse-sensitive query is scoped to
+  their warehouse. Admin-only pages (e.g. warehouse management)
+  redirect them with a generic error.
+- The permission logic lives in one place: `application/libraries/Auth_lib.php`
+  (`is_admin()`, `is_warehouse_user()`, `assigned_warehouse_id()`,
+  `warehouse_scope()`, `require_admin()`, `require_warehouse_access()`,
+  ...). Controllers apply `scope_to_warehouse()` once per request;
+  `Inventory_model`, `Sale_model` and `Warehouse_model` then filter
+  every read automatically.
+- Seed accounts (see `application/database/schema.sql`):
+  `admin` / `admin123` (admin) and `warehouse1` / `warehouse123`
+  (assigned to the Main Warehouse). New self-registered accounts are
+  created as admins — there is no user-management UI, so create
+  warehouse users directly in the database (`user_type = 'user_warehouse'`
+  with a valid `warehouse_id`) or via the seed data.
+- For databases created before this feature, run
+  `application/database/migrations/001_add_user_permissions.sql` once.
+
+## Users (admin only)
+
+Simple user management for administrators (all routes require an admin
+account; warehouse users are redirected away):
+
+| Route            | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| `/users`         | List user accounts (type, assigned warehouse, status)   |
+| `/users/create`  | Add-user form                                           |
+| `/users/store`   | Save a new user (POST, CSRF protected)                  |
+
+- The form creates either an `admin` (no warehouse) or a `user_warehouse`
+  (a valid warehouse is required — the field only appears for that type,
+  and the server re-validates it regardless of what is submitted).
+- Passwords are hashed with `password_hash()`; usernames must be unique
+  and follow the same rules as sign-up.
+
+### Key files
+
+- `application/controllers/Users.php` — list / create / store
+- `application/models/User_model.php` — `get_all()` and `create()`
+- `application/views/users/*` — list and add-user form
+
 ## Products
 
 Product management (all routes require authentication). Products are

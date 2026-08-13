@@ -60,6 +60,12 @@ $username = isset($user) && $user !== NULL ? $user->username : '';
 				<h2 class="text-sm font-semibold text-slate-900">Inventory</h2>
 				<p class="mt-1 text-sm text-slate-500">Manage warehouse inventory</p>
 			</a>
+			<?php if (isset($user) && $user !== NULL && $user->user_type === 'admin'): ?>
+				<a href="<?php echo site_url('users'); ?>" class="block rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5 transition hover:bg-slate-50">
+					<h2 class="text-sm font-semibold text-slate-900">Users</h2>
+					<p class="mt-1 text-sm text-slate-500">Manage user accounts and warehouse assignments</p>
+				</a>
+			<?php endif; ?>
 		</div>
 	</main>
 </body>

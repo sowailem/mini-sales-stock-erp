@@ -5,7 +5,12 @@
  *
  * The invoice items are built client-side by assets/js/sales.js; the
  * table rows carry the product_id[]/quantity[] fields that are posted
- * to sales/store. Expects: $customers, $warehouses.
+ * to sales/store. Admins pick a warehouse; warehouse users see their
+ * assigned warehouse as read-only information (no selector, and the
+ * server ignores any submitted warehouse_id for them).
+ *
+ * Expects: $customers, $warehouses, $assigned_warehouse (object|NULL),
+ *          $is_admin (bool).
  */
 
 // form_error() wraps the message in the default <p> delimiters; strip
@@ -59,36 +64,47 @@ $discount_error = trim(strip_tags(form_error('discount', '', '')));
 					<?php endif; ?>
 				</div>
 
-				<div>
-					<label for="warehouse_id" class="block text-sm font-medium text-slate-700">Warehouse</label>
-					<div class="mt-2">
-						<select name="warehouse_id" id="warehouse_id" required
-							class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset focus:ring-2 focus:ring-inset sm:text-sm <?php echo $warehouse_error ? 'ring-red-300 focus:ring-red-500' : 'ring-slate-300 focus:ring-indigo-600'; ?>"
-							<?php echo $warehouse_error ? 'aria-describedby="warehouse_id-error"' : ''; ?>>
-							<option value="">Select warehouse…</option>
-							<?php foreach ($warehouses as $warehouse): ?>
-								<option value="<?php echo (int) $warehouse->id; ?>"<?php echo set_select('warehouse_id', (string) $warehouse->id); ?>>
-									<?php echo html_escape($warehouse->name); ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
+				<?php if ($is_admin): ?>
+					<div>
+						<label for="warehouse_id" class="block text-sm font-medium text-slate-700">Warehouse</label>
+						<div class="mt-2">
+							<select name="warehouse_id" id="warehouse_id" required
+								class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset focus:ring-2 focus:ring-inset sm:text-sm <?php echo $warehouse_error ? 'ring-red-300 focus:ring-red-500' : 'ring-slate-300 focus:ring-indigo-600'; ?>"
+								<?php echo $warehouse_error ? 'aria-describedby="warehouse_id-error"' : ''; ?>>
+								<option value="">Select warehouse…</option>
+								<?php foreach ($warehouses as $warehouse): ?>
+									<option value="<?php echo (int) $warehouse->id; ?>"<?php echo set_select('warehouse_id', (string) $warehouse->id); ?>>
+										<?php echo html_escape($warehouse->name); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+						<?php if ($warehouse_error): ?>
+							<p id="warehouse_id-error" class="mt-2 text-sm text-red-600"><?php echo html_escape($warehouse_error); ?></p>
+						<?php endif; ?>
 					</div>
-					<?php if ($warehouse_error): ?>
-						<p id="warehouse_id-error" class="mt-2 text-sm text-red-600"><?php echo html_escape($warehouse_error); ?></p>
-					<?php endif; ?>
-				</div>
+				<?php else: ?>
+					<div>
+						<label class="block text-sm font-medium text-slate-700">Warehouse</label>
+						<div class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-slate-900 ring-1 ring-inset ring-slate-200">
+							<span><?php echo html_escape($assigned_warehouse->name); ?></span>
+							<span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200">Assigned</span>
+						</div>
+						<p class="mt-1 text-xs text-slate-400">Sales are automatically recorded for your assigned warehouse.</p>
+					</div>
+				<?php endif; ?>
 			</div>
 
 			<!-- Product search -->
 			<div class="mt-6">
 				<label for="product-search-input" class="block text-sm font-medium text-slate-700">Product</label>
 				<div class="mt-2">
-					<div class="relative" id="product-search" data-search-url="<?php echo site_url('sales/search-products'); ?>">
+					<div class="relative" id="product-search" data-search-url="<?php echo site_url('sales/search-products'); ?>"<?php echo $is_admin ? '' : ' data-warehouse-id="'.(int) $assigned_warehouse->id.'"'; ?>>
 						<input type="search" id="product-search-input" autocomplete="off" placeholder="Search product…" maxlength="100"
 							class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm">
 						<ul id="product-results" class="absolute left-0 right-0 z-10 mt-1 hidden max-h-72 overflow-y-auto rounded-lg bg-white py-1 shadow-lg ring-1 ring-slate-900/5" role="listbox" aria-label="Product results"></ul>
 					</div>
-					<p class="mt-1 text-xs text-slate-400">Type to search — stock is shown for the selected warehouse.</p>
+					<p class="mt-1 text-xs text-slate-400">Type to search — stock is shown for <?php echo $is_admin ? 'the selected warehouse' : 'your assigned warehouse'; ?>.</p>
 				</div>
 			</div>
 		</div>

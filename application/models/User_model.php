@@ -84,6 +84,24 @@ class User_model extends CI_Model
 	}
 
 	/**
+	 * All users with their assigned warehouse name joined in (NULL for
+	 * admins). The password hash is never selected. Ordered by username
+	 * (which is unique, so the order is deterministic).
+	 *
+	 * @return	array
+	 */
+	public function get_all()
+	{
+		return $this->db
+			->select('users.id, users.username, users.user_type, users.warehouse_id, users.is_active, users.created_at, warehouses.name AS warehouse_name')
+			->from($this->table)
+			->join('warehouses', 'warehouses.id = users.warehouse_id', 'left')
+			->order_by('users.username', 'ASC')
+			->get()
+			->result();
+	}
+
+	/**
 	 * Validate a user-type / warehouse assignment pair. Only the two
 	 * known user types are allowed: admins must have no warehouse and
 	 * warehouse users must carry a positive warehouse ID. Warehouse
