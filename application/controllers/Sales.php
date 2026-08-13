@@ -64,6 +64,10 @@ class Sales extends CI_Controller
 	{
 		$this->auth->require_login();
 
+		// Warehouse users only ever see their own warehouse's invoices;
+		// admins see all of them. One central scope for the whole request.
+		$this->Sale_model->scope_to_warehouse($this->auth->warehouse_scope());
+
 		$search = trim((string) $this->input->get('q'));
 		$search = function_exists('mb_substr') ? mb_substr($search, 0, 100) : substr($search, 0, 100);
 
@@ -111,6 +115,11 @@ class Sales extends CI_Controller
 	{
 		$this->auth->require_login();
 
+		// Warehouse users can only read invoices from their own
+		// warehouse; an invoice from any other warehouse simply looks
+		// like it does not exist.
+		$this->Sale_model->scope_to_warehouse($this->auth->warehouse_scope());
+
 		$sale = $this->_find_sale($id);
 
 		if ($sale === NULL)
@@ -133,12 +142,23 @@ class Sales extends CI_Controller
 	/**
 	 * GET /sales/create
 	 *
-	 * Displays the New Sale page (the invoice builder).
+	 * Displays the New Sale page (the invoice builder). Admins pick the
+	 * warehouse; warehouse users are locked to their assigned warehouse
+	 * and never see a warehouse selector.
 	 */
 	public function create()
 	{
 		$this->auth->require_login();
-		$this->_render_form();
+
+		$is_admin = $this->auth->is_admin();
+
+		if ( ! $is_admin && $this->auth->assigned_warehouse_id() === NULL)
+		{
+			$this->session->set_flashdata('error', 'You do not have permission to access this page.');
+			redirect('dashboard');
+		}
+
+		$this->_render_form($is_admin);
 	}
 
 	/**
@@ -162,10 +182,20 @@ class Sales extends CI_Controller
 		$term = trim((string) $this->input->get('q'));
 		$term = function_exists('mb_substr') ? mb_substr($term, 0, 100) : substr($term, 0, 100);
 
-		// Optional warehouse filter for stock. Invalid/absent values just
-		// mean no stock is reported.
-		$warehouse_filter = $this->input->get('warehouse_id');
-		$warehouse_id = (is_numeric($warehouse_filter) && (int) $warehouse_filter > 0) ? (int) $warehouse_filter : NULL;
+		// The warehouse used for the stock lookup. Admins may ask about
+		// any warehouse; a warehouse user is always locked to their
+		// assigned warehouse and a client-supplied ID is never trusted.
+		if ($this->auth->is_admin())
+		{
+			// Optional warehouse filter for stock. Invalid/absent values
+			// just mean no stock is reported.
+			$warehouse_filter = $this->input->get('warehouse_id');
+			$warehouse_id = (is_numeric($warehouse_filter) && (int) $warehouse_filter > 0) ? (int) $warehouse_filter : NULL;
+		}
+		else
+		{
+			$warehouse_id = $this->auth->assigned_warehouse_id();
+		}
 
 		$products = array();
 
@@ -225,7 +255,20 @@ class Sales extends CI_Controller
 			redirect('sales/create');
 		}
 
-		$this->_set_validation_rules();
+		$is_admin = $this->auth->is_admin();
+
+		if ( ! $is_admin && $this->auth->assigned_warehouse_id() === NULL)
+		{
+			$this->session->set_flashdata('error', 'You do not have permission to access this page.');
+			redirect('dashboard');
+		}
+
+		// The warehouse the invoice is recorded against. Admins choose
+		// it on the form; a warehouse user's assignment is authoritative
+		// and a submitted warehouse_id can never override it.
+		$warehouse_id = $is_admin ? (int) $this->input->post('warehouse_id') : $this->auth->assigned_warehouse_id();
+
+		$this->_set_validation_rules($is_admin);
 
 		if ($this->form_validation->run() === TRUE)
 		{
@@ -261,7 +304,7 @@ class Sales extends CI_Controller
 
 			$sale_id = $this->Sale_model->create(array(
 				'customer_id' => (int) $this->input->post('customer_id'),
-				'warehouse_id' => (int) $this->input->post('warehouse_id'),
+				'warehouse_id' => $warehouse_id,
 				'subtotal' => sprintf('%.2f', $subtotal),
 				'discount' => sprintf('%.2f', $discount),
 				'total' => sprintf('%.2f', $total),
@@ -272,7 +315,7 @@ class Sales extends CI_Controller
 			if ($sale_id !== FALSE)
 			{
 				$this->Sale_model->create_items($sale_id, $this->invoice_items);
-				$stock_failure = $this->Inventory_model->deduct_stock((int) $this->input->post('warehouse_id'), $this->invoice_items);
+				$stock_failure = $this->Inventory_model->deduct_stock($warehouse_id, $this->invoice_items);
 			}
 
 			if ($sale_id !== FALSE && $stock_failure === NULL && $this->db->trans_status() === TRUE)
@@ -286,7 +329,7 @@ class Sales extends CI_Controller
 
 			if ($stock_failure !== NULL)
 			{
-				$warehouse = $this->Warehouse_model->get_by_id((int) $this->input->post('warehouse_id'));
+				$warehouse = $this->Warehouse_model->get_by_id($warehouse_id);
 				$warehouse_name = $warehouse !== NULL ? $warehouse->name : 'the selected warehouse';
 				$this->session->set_flashdata('error', 'Unable to save the invoice: not enough stock for "' . $stock_failure . '" in ' . $warehouse_name . '.');
 			}
@@ -299,7 +342,7 @@ class Sales extends CI_Controller
 			redirect('sales');
 		}
 
-		$this->_render_form();
+		$this->_render_form($is_admin);
 	}
 
 	/**
@@ -356,14 +399,22 @@ class Sales extends CI_Controller
 	 *
 	 * @return	void
 	 */
-	protected function _set_validation_rules()
+	protected function _set_validation_rules($is_admin = TRUE)
 	{
 		$this->form_validation->set_rules('customer_id', 'Customer', 'required|callback_customer_valid', array(
 			'required' => 'Please choose a customer.',
 		));
-		$this->form_validation->set_rules('warehouse_id', 'Warehouse', 'required|callback_warehouse_valid', array(
-			'required' => 'Please choose a warehouse.',
-		));
+
+		// The warehouse field only exists on the admin form. For a
+		// warehouse user the warehouse is resolved from their account
+		// and a submitted value is deliberately ignored.
+		if ($is_admin)
+		{
+			$this->form_validation->set_rules('warehouse_id', 'Warehouse', 'required|callback_warehouse_valid', array(
+				'required' => 'Please choose a warehouse.',
+			));
+		}
+
 		$this->form_validation->set_rules('discount', 'Discount', 'trim|numeric|greater_than_equal_to[0]|less_than[10000000000]', array(
 			'numeric' => 'The discount must be a valid number.',
 			'greater_than_equal_to' => 'The discount must be 0 or greater.',
@@ -500,9 +551,13 @@ class Sales extends CI_Controller
 	/**
 	 * Load the shared app layout with the New Sale form.
 	 *
+	 * Admins get the full warehouse selector; warehouse users get their
+	 * assigned warehouse as read-only information and no selector.
+	 *
+	 * @param	bool	$is_admin
 	 * @return	void
 	 */
-	protected function _render_form()
+	protected function _render_form($is_admin = TRUE)
 	{
 		$this->load->view('products/layout', array(
 			'page_title' => 'New Sale',
@@ -510,7 +565,9 @@ class Sales extends CI_Controller
 			'user' => $this->auth->current_user(),
 			'content_data' => array(
 				'customers' => $this->Customer_model->get_all(),
-				'warehouses' => $this->Warehouse_model->get_all(),
+				'warehouses' => $is_admin ? $this->Warehouse_model->get_all() : array(),
+				'assigned_warehouse' => $is_admin ? NULL : $this->auth->assigned_warehouse(),
+				'is_admin' => $is_admin,
 			),
 		));
 	}

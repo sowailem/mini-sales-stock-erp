@@ -184,4 +184,191 @@ class Auth_lib
 
 		return $uri;
 	}
+
+	/* ------------------------------------------------------------------ *
+	 * Permissions
+	 * ------------------------------------------------------------------ *
+	 * The application knows exactly two user types, stored on the user
+	 * record itself (no roles/permissions tables):
+	 *
+	 *   - 'admin'          global access, warehouse_id = NULL
+	 *   - 'user_warehouse' access limited to warehouse_id
+	 *
+	 * These methods are the single source of truth for authorization;
+	 * controllers must never re-derive the current user's type or scope
+	 * on their own.
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * User type of the authenticated user ('admin' or 'user_warehouse'),
+	 * or NULL for guests / unknown users.
+	 *
+	 * @return	string|NULL
+	 */
+	public function user_type()
+	{
+		$user = $this->current_user();
+
+		return $user !== NULL ? $user->user_type : NULL;
+	}
+
+	/**
+	 * Whether the authenticated user is an admin (global access).
+	 *
+	 * @return	bool
+	 */
+	public function is_admin()
+	{
+		return $this->user_type() === 'admin';
+	}
+
+	/**
+	 * Whether the authenticated user is a warehouse user (access limited
+	 * to one assigned warehouse).
+	 *
+	 * @return	bool
+	 */
+	public function is_warehouse_user()
+	{
+		return $this->user_type() === 'user_warehouse';
+	}
+
+	/**
+	 * Warehouse the authenticated user is assigned to, or NULL for
+	 * admins and guests. A warehouse user whose warehouse was deleted
+	 * (FK ON DELETE SET NULL) also gets NULL here.
+	 *
+	 * @return	int|NULL
+	 */
+	public function assigned_warehouse_id()
+	{
+		$user = $this->current_user();
+
+		if ($user === NULL)
+		{
+			return NULL;
+		}
+
+		$warehouse_id = $user->warehouse_id;
+
+		return ($warehouse_id !== NULL && (int) $warehouse_id > 0) ? (int) $warehouse_id : NULL;
+	}
+
+	/**
+	 * Warehouse record the authenticated user is assigned to, or NULL.
+	 * Only meaningful for warehouse users.
+	 *
+	 * @return	object|NULL
+	 */
+	public function assigned_warehouse()
+	{
+		$warehouse_id = $this->assigned_warehouse_id();
+
+		if ($warehouse_id === NULL)
+		{
+			return NULL;
+		}
+
+		$this->CI->load->model('Warehouse_model');
+
+		return $this->CI->Warehouse_model->get_by_id($warehouse_id);
+	}
+
+	/**
+	 * Warehouse scope for warehouse-aware queries. NULL means "all
+	 * warehouses" (admins), a positive integer restricts to that
+	 * warehouse, and 0 means "nothing visible" (a warehouse user whose
+	 * assignment is missing, or an unknown user type). Controllers feed
+	 * this into a model's scope_to_warehouse() in exactly one place per
+	 * request.
+	 *
+	 * @return	int|NULL
+	 */
+	public function warehouse_scope()
+	{
+		if ($this->is_admin())
+		{
+			return NULL;
+		}
+
+		if ($this->is_warehouse_user())
+		{
+			$warehouse_id = $this->assigned_warehouse_id();
+
+			return $warehouse_id !== NULL ? $warehouse_id : 0;
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Whether the authenticated user may access the given warehouse.
+	 * Admins may access any warehouse; warehouse users only their own.
+	 * Invalid IDs are always rejected.
+	 *
+	 * @param	mixed	$warehouse_id
+	 * @return	bool
+	 */
+	public function can_access_warehouse($warehouse_id)
+	{
+		if ( ! is_numeric($warehouse_id) OR (int) $warehouse_id <= 0)
+		{
+			return FALSE;
+		}
+
+		if ($this->is_admin())
+		{
+			return TRUE;
+		}
+
+		if ( ! $this->is_warehouse_user())
+		{
+			return FALSE;
+		}
+
+		return (int) $warehouse_id === (int) $this->assigned_warehouse_id();
+	}
+
+	/**
+	 * Guard for admin-only pages. Redirects guests to the sign-in page
+	 * and non-admins to the dashboard with a generic error. Returns
+	 * normally for admins.
+	 *
+	 * @return	void
+	 */
+	public function require_admin()
+	{
+		$this->require_login();
+
+		if ($this->is_admin())
+		{
+			return;
+		}
+
+		// Generic message: never reveal what the restricted page was.
+		$this->CI->session->set_flashdata('error', 'You do not have permission to access this page.');
+		redirect('dashboard');
+	}
+
+	/**
+	 * Guard for access to a specific warehouse. Redirects guests to the
+	 * sign-in page and users without access to that warehouse to the
+	 * inventory page with a generic error. Returns normally for users
+	 * who may access the warehouse.
+	 *
+	 * @param	mixed	$warehouse_id
+	 * @return	void
+	 */
+	public function require_warehouse_access($warehouse_id)
+	{
+		$this->require_login();
+
+		if ($this->can_access_warehouse($warehouse_id))
+		{
+			return;
+		}
+
+		$this->CI->session->set_flashdata('error', 'You do not have permission to access that warehouse.');
+		redirect('inventory');
+	}
 }

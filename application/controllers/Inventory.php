@@ -31,13 +31,31 @@ class Inventory extends CI_Controller
 	 *
 	 * Inventory listing with an optional warehouse filter
 	 * (?warehouse_id=N). Invalid or unknown warehouse IDs are ignored
-	 * and fall back to "all warehouses".
+	 * and fall back to "all warehouses". Warehouse users are always
+	 * locked to their assigned warehouse — a submitted filter can never
+	 * widen their view.
 	 */
 	public function index()
 	{
 		$this->auth->require_login();
 
-		$warehouse_id = $this->_validated_warehouse_filter($this->input->get('warehouse_id'));
+		$is_admin = $this->auth->is_admin();
+
+		// One central scope for the whole request: NULL for admins (all
+		// warehouses), the assigned warehouse for warehouse users.
+		$scope = $this->auth->warehouse_scope();
+		$this->Inventory_model->scope_to_warehouse($scope);
+		$this->Warehouse_model->scope_to_warehouse($scope);
+
+		if ($is_admin)
+		{
+			$warehouse_id = $this->_validated_warehouse_filter($this->input->get('warehouse_id'));
+		}
+		else
+		{
+			// Never trust a client-supplied filter: force the assignment.
+			$warehouse_id = $this->auth->assigned_warehouse_id();
+		}
 
 		$this->load->view('products/layout', array(
 			'page_title' => 'Inventory',
@@ -45,8 +63,10 @@ class Inventory extends CI_Controller
 			'user' => $this->auth->current_user(),
 			'content_data' => array(
 				'inventory' => $this->Inventory_model->get_inventory($warehouse_id),
-				'warehouses' => $this->Warehouse_model->get_all(),
+				'warehouses' => $is_admin ? $this->Warehouse_model->get_all() : array(),
 				'warehouse_id' => $warehouse_id,
+				'is_admin' => $is_admin,
+				'assigned_warehouse' => $is_admin ? NULL : $this->auth->assigned_warehouse(),
 			),
 		));
 	}
@@ -56,11 +76,14 @@ class Inventory extends CI_Controller
 	 *
 	 * Displays the quantity of a single product inside a single
 	 * warehouse. A missing warehouse_stock record renders as quantity 0
-	 * (no record is created by viewing).
+	 * (no record is created by viewing). Warehouse users may only reach
+	 * their own warehouse; any other warehouse ID is rejected
+	 * server-side.
 	 */
 	public function product($warehouse_id, $product_id)
 	{
 		$this->auth->require_login();
+		$this->auth->require_warehouse_access($warehouse_id);
 
 		$warehouse = $this->_find_warehouse($warehouse_id);
 
@@ -93,11 +116,12 @@ class Inventory extends CI_Controller
 	/**
 	 * GET /inventory/warehouses
 	 *
-	 * Lists all warehouses.
+	 * Lists all warehouses. Warehouse management is an admin feature;
+	 * warehouse users see their own warehouse on the inventory page.
 	 */
 	public function warehouses()
 	{
-		$this->auth->require_login();
+		$this->auth->require_admin();
 
 		$this->load->view('products/layout', array(
 			'page_title' => 'Warehouses',
@@ -112,11 +136,11 @@ class Inventory extends CI_Controller
 	/**
 	 * GET /inventory/warehouses/create
 	 *
-	 * Displays the add-warehouse form.
+	 * Displays the add-warehouse form (admin only).
 	 */
 	public function create_warehouse()
 	{
-		$this->auth->require_login();
+		$this->auth->require_admin();
 
 		$this->_render_warehouse_form('Add Warehouse');
 	}
@@ -124,13 +148,13 @@ class Inventory extends CI_Controller
 	/**
 	 * POST /inventory/warehouses/store
 	 *
-	 * Validates and saves a new warehouse. Redirects to the warehouse
-	 * list on success, re-renders the form (values preserved) on
-	 * failure.
+	 * Validates and saves a new warehouse (admin only). Redirects to
+	 * the warehouse list on success, re-renders the form (values
+	 * preserved) on failure.
 	 */
 	public function store_warehouse()
 	{
-		$this->auth->require_login();
+		$this->auth->require_admin();
 
 		if ($this->input->method() !== 'post')
 		{

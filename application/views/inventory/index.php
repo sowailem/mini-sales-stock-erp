@@ -3,33 +3,41 @@
 /**
  * Inventory listing (content view, loaded by products/layout).
  *
- * Expects: $inventory, $warehouses, $warehouse_id (int|NULL)
+ * Admins: full warehouse filter + warehouse-management buttons.
+ * Warehouse users: no selector, their assigned warehouse shown as
+ * read-only information, inventory limited to that warehouse.
+ *
+ * Expects: $inventory, $warehouses, $warehouse_id (int|NULL),
+ *          $is_admin (bool), $assigned_warehouse (object|NULL)
  */
 
 $has_warehouses = ! empty($warehouses);
 $has_filter = $warehouse_id !== NULL;
+$is_warehouse_user = ! $is_admin;
 ?>
 
 <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 	<div>
 		<h1 class="text-2xl font-semibold tracking-tight text-slate-900">Inventory</h1>
-		<p class="mt-1 text-sm text-slate-500">Manage and view product quantities across warehouses.</p>
+		<p class="mt-1 text-sm text-slate-500"><?php echo $is_warehouse_user ? 'Product quantities for your assigned warehouse.' : 'Manage and view product quantities across warehouses.'; ?></p>
 	</div>
-	<div class="flex flex-col gap-2 sm:flex-row">
-		<a href="<?php echo site_url('inventory/warehouses'); ?>"
-			class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-			Warehouses
-		</a>
-		<a href="<?php echo site_url('inventory/warehouses/create'); ?>"
-			class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-			Add Warehouse
-		</a>
-	</div>
+	<?php if ($is_admin): ?>
+		<div class="flex flex-col gap-2 sm:flex-row">
+			<a href="<?php echo site_url('inventory/warehouses'); ?>"
+				class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+				Warehouses
+			</a>
+			<a href="<?php echo site_url('inventory/warehouses/create'); ?>"
+				class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+				Add Warehouse
+			</a>
+		</div>
+	<?php endif; ?>
 </div>
 
-<?php if ( ! $has_warehouses): ?>
+<?php if ($is_admin && ! $has_warehouses): ?>
 
-	<!-- Empty state: no warehouses yet -->
+	<!-- Empty state: no warehouses yet (admin only) -->
 	<div class="mt-6 rounded-2xl bg-white px-6 py-16 text-center shadow-sm ring-1 ring-slate-900/5">
 		<div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
 			<svg class="h-6 w-6 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -48,37 +56,52 @@ $has_filter = $warehouse_id !== NULL;
 
 <?php else: ?>
 
-	<!-- Warehouse filter -->
+	<!-- Warehouse filter (admin) or assigned warehouse (warehouse user) -->
 	<div class="mt-6 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
-		<form method="get" action="<?php echo site_url('inventory'); ?>" class="flex flex-col gap-4 sm:flex-row sm:items-end">
-			<div class="w-full sm:w-72">
-				<label for="warehouse_id" class="block text-sm font-medium text-slate-700">Warehouse</label>
-				<div class="mt-2">
-					<select name="warehouse_id" id="warehouse_id"
-						class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm">
-						<option value="">All Warehouses</option>
-						<?php foreach ($warehouses as $warehouse): ?>
-							<option value="<?php echo (int) $warehouse->id; ?>"<?php echo $has_filter && $warehouse_id === (int) $warehouse->id ? ' selected' : ''; ?>>
-								<?php echo html_escape($warehouse->name); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
-				</div>
-			</div>
+		<?php if ($is_warehouse_user): ?>
 
-			<div class="flex gap-2">
-				<button type="submit"
-					class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-					Filter
-				</button>
-				<?php if ($has_filter): ?>
-					<a href="<?php echo site_url('inventory'); ?>"
-						class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
-						Clear
-					</a>
-				<?php endif; ?>
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<p class="text-sm font-medium text-slate-700">Warehouse</p>
+					<p class="mt-1 text-sm font-semibold text-slate-900"><?php echo $assigned_warehouse !== NULL ? html_escape($assigned_warehouse->name) : '—'; ?></p>
+				</div>
+				<span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200">Assigned</span>
 			</div>
-		</form>
+			<p class="mt-2 text-xs text-slate-400">You can only view inventory for your assigned warehouse.</p>
+
+		<?php else: ?>
+
+			<form method="get" action="<?php echo site_url('inventory'); ?>" class="flex flex-col gap-4 sm:flex-row sm:items-end">
+				<div class="w-full sm:w-72">
+					<label for="warehouse_id" class="block text-sm font-medium text-slate-700">Warehouse</label>
+					<div class="mt-2">
+						<select name="warehouse_id" id="warehouse_id"
+							class="block w-full rounded-lg border-0 px-3.5 py-2.5 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm">
+							<option value="">All Warehouses</option>
+							<?php foreach ($warehouses as $warehouse): ?>
+								<option value="<?php echo (int) $warehouse->id; ?>"<?php echo $has_filter && $warehouse_id === (int) $warehouse->id ? ' selected' : ''; ?>>
+									<?php echo html_escape($warehouse->name); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+				</div>
+
+				<div class="flex gap-2">
+					<button type="submit"
+						class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+						Filter
+					</button>
+					<?php if ($has_filter): ?>
+						<a href="<?php echo site_url('inventory'); ?>"
+							class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+							Clear
+						</a>
+					<?php endif; ?>
+				</div>
+			</form>
+
+		<?php endif; ?>
 	</div>
 
 	<!-- Inventory table -->

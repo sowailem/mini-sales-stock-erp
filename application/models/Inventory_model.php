@@ -18,6 +18,17 @@ class Inventory_model extends CI_Model
 	 */
 	protected $stock_table = 'warehouse_stock';
 
+	/**
+	 * Warehouse scope for read queries. NULL = all warehouses; a
+	 * positive integer = only that warehouse; 0 = nothing. Set once per
+	 * request by the controller from Auth_lib::warehouse_scope() so the
+	 * authorization condition lives in one place instead of in every
+	 * method.
+	 *
+	 * @var int|NULL
+	 */
+	protected $warehouse_scope = NULL;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -25,9 +36,46 @@ class Inventory_model extends CI_Model
 	}
 
 	/**
+	 * Restrict read queries to a single warehouse (or to nothing when
+	 * the scope is 0). Pass NULL to lift the restriction.
+	 *
+	 * @param	int|NULL	$warehouse_id
+	 * @return	$this
+	 */
+	public function scope_to_warehouse($warehouse_id)
+	{
+		$this->warehouse_scope = $warehouse_id === NULL ? NULL : (int) $warehouse_id;
+
+		return $this;
+	}
+
+	/**
+	 * Apply the configured warehouse scope to the active query.
+	 *
+	 * @return	void
+	 */
+	protected function _apply_warehouse_scope()
+	{
+		if ($this->warehouse_scope === NULL)
+		{
+			return;
+		}
+
+		if ($this->warehouse_scope > 0)
+		{
+			$this->db->where('warehouse_stock.warehouse_id', $this->warehouse_scope);
+		}
+		else
+		{
+			$this->db->where('1 = 0');
+		}
+	}
+
+	/**
 	 * Inventory rows (warehouse, product, quantity), optionally limited
-	 * to a single warehouse. Only valid warehouse/product relationships
-	 * are returned — the inner joins drop orphaned rows.
+	 * to a single warehouse and always limited by the configured scope.
+	 * Only valid warehouse/product relationships are returned — the
+	 * inner joins drop orphaned rows.
 	 *
 	 * @param	int|NULL	$warehouse_id	Optional warehouse filter
 	 * @return	array
@@ -44,6 +92,8 @@ class Inventory_model extends CI_Model
 		{
 			$this->db->where('warehouse_stock.warehouse_id', (int) $warehouse_id);
 		}
+
+		$this->_apply_warehouse_scope();
 
 		return $this->db
 			->order_by('warehouses.name', 'ASC')

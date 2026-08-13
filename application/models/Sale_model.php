@@ -29,6 +29,17 @@ class Sale_model extends CI_Model
 	 */
 	protected $list_columns = 'sales.id, sales.customer_id, sales.warehouse_id, sales.subtotal, sales.discount, sales.total, sales.created_at, customers.name AS customer_name, warehouses.name AS warehouse_name, (SELECT COUNT(*) FROM sale_items WHERE sale_items.sale_id = sales.id) AS item_count';
 
+	/**
+	 * Warehouse scope for read queries. NULL = all warehouses; a
+	 * positive integer = only that warehouse; 0 = nothing. Set once per
+	 * request by the controller from Auth_lib::warehouse_scope() so the
+	 * authorization condition lives in one place instead of in every
+	 * method.
+	 *
+	 * @var int|NULL
+	 */
+	protected $warehouse_scope = NULL;
+
 	public function __construct()
 	{
 		parent::__construct();
@@ -36,9 +47,46 @@ class Sale_model extends CI_Model
 	}
 
 	/**
+	 * Restrict read queries to a single warehouse (or to nothing when
+	 * the scope is 0). Pass NULL to lift the restriction.
+	 *
+	 * @param	int|NULL	$warehouse_id
+	 * @return	$this
+	 */
+	public function scope_to_warehouse($warehouse_id)
+	{
+		$this->warehouse_scope = $warehouse_id === NULL ? NULL : (int) $warehouse_id;
+
+		return $this;
+	}
+
+	/**
+	 * Apply the configured warehouse scope to the active query.
+	 *
+	 * @return	void
+	 */
+	protected function _apply_warehouse_scope()
+	{
+		if ($this->warehouse_scope === NULL)
+		{
+			return;
+		}
+
+		if ($this->warehouse_scope > 0)
+		{
+			$this->db->where('sales.warehouse_id', $this->warehouse_scope);
+		}
+		else
+		{
+			$this->db->where('1 = 0');
+		}
+	}
+
+	/**
 	 * Get a page of recent invoices (newest first) with the customer
 	 * and warehouse names joined in, optionally narrowed by a search
-	 * term (invoice number or customer name).
+	 * term (invoice number or customer name). Always limited by the
+	 * configured warehouse scope.
 	 *
 	 * @param	int		$limit
 	 * @param	int		$offset
@@ -48,6 +96,7 @@ class Sale_model extends CI_Model
 	public function get_recent($limit, $offset, $search = '')
 	{
 		$this->_apply_search($search);
+		$this->_apply_warehouse_scope();
 
 		return $this->db
 			->select($this->list_columns)
@@ -62,7 +111,8 @@ class Sale_model extends CI_Model
 
 	/**
 	 * Total number of invoices matching the given search term. Used to
-	 * build the pagination totals.
+	 * build the pagination totals. Always limited by the configured
+	 * warehouse scope.
 	 *
 	 * @param	string	$search
 	 * @return	int
@@ -70,6 +120,7 @@ class Sale_model extends CI_Model
 	public function count_all($search = '')
 	{
 		$this->_apply_search($search);
+		$this->_apply_warehouse_scope();
 
 		return (int) $this->db
 			->from($this->sales_table)
@@ -98,12 +149,17 @@ class Sale_model extends CI_Model
 
 	/**
 	 * Get a single invoice by ID with its customer and warehouse names.
+	 * Returns NULL when the invoice belongs to a warehouse outside the
+	 * configured scope, so warehouse users can never read another
+	 * warehouse's invoices.
 	 *
 	 * @param	int	$id
 	 * @return	object|NULL
 	 */
 	public function get_by_id($id)
 	{
+		$this->_apply_warehouse_scope();
+
 		return $this->db
 			->select($this->list_columns)
 			->from($this->sales_table)
