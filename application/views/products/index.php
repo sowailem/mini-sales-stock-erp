@@ -142,9 +142,13 @@ $has_filters = ($search !== '' || $category_id !== NULL);
 							<td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
 								<a href="<?php echo site_url('products/edit/'.$product->id); ?>" class="text-indigo-600 transition hover:text-indigo-500">Edit</a>
 								<?php if ((int) $product->is_active === 1): ?>
-									<?php echo form_open('products/disable/'.$product->id, array('class' => 'inline', 'onsubmit' => "return confirm('Disable this product? It will no longer appear as active.');", 'novalidate' => 'novalidate')); ?>
-										<button type="submit" class="ml-3 text-red-600 transition hover:text-red-500">Disable</button>
-									<?php echo form_close(); ?>
+									<button type="button"
+										class="ml-3 text-red-600 transition hover:text-red-500"
+										data-confirm
+										data-confirm-message="<?php echo html_escape('Disable "'.$product->name.'"? It will no longer appear as active.'); ?>"
+										data-confirm-action="<?php echo site_url('products/disable/'.$product->id); ?>">
+										Disable
+									</button>
 								<?php endif; ?>
 							</td>
 						</tr>
@@ -159,3 +163,6 @@ $has_filters = ($search !== '' || $category_id !== NULL);
 <?php if ( ! empty($pagination_links)): ?>
 	<?php echo $pagination_links; ?>
 <?php endif; ?>
+
+<?php $this->load->view('partials/confirm_modal'); ?>
+<script src="<?php echo base_url('assets/js/app.js'); ?>" defer></script>
