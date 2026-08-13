@@ -1,0 +1,13 @@
+{
+	"name": "mini-sales-stock-erp",
+	"private": true,
+	"description": "Mini Sales & Stock ERP — CodeIgniter 3 application",
+	"scripts": {
+		"build:css": "tailwindcss -i ./assets/css/input.css -o ./assets/css/app.css --minify",
+		"watch:css": "tailwindcss -i ./assets/css/input.css -o ./assets/css/app.css --watch"
+	},
+	"devDependencies": {
+		"@tailwindcss/cli": "^4.1.0",
+		"tailwindcss": "^4.1.0"
+	}
+}

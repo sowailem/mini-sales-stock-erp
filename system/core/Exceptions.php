@@ -62,20 +62,7 @@ class CI_Exceptions {
 	 *
 	 * @var	array
 	 */
-	public $levels = array(
-		E_ERROR			=>	'Error',
-		E_WARNING		=>	'Warning',
-		E_PARSE			=>	'Parsing Error',
-		E_NOTICE		=>	'Notice',
-		E_CORE_ERROR		=>	'Core Error',
-		E_CORE_WARNING		=>	'Core Warning',
-		E_COMPILE_ERROR		=>	'Compile Error',
-		E_COMPILE_WARNING	=>	'Compile Warning',
-		E_USER_ERROR		=>	'User Error',
-		E_USER_WARNING		=>	'User Warning',
-		E_USER_NOTICE		=>	'User Notice',
-		E_STRICT		=>	'Runtime Notice'
-	);
+	public $levels = array();
 
 	/**
 	 * Class constructor
@@ -85,6 +72,29 @@ class CI_Exceptions {
 	public function __construct()
 	{
 		$this->ob_level = ob_get_level();
+
+		$this->levels = array(
+			E_ERROR			=>	'Error',
+			E_WARNING		=>	'Warning',
+			E_PARSE			=>	'Parsing Error',
+			E_NOTICE		=>	'Notice',
+			E_CORE_ERROR		=>	'Core Error',
+			E_CORE_WARNING		=>	'Core Warning',
+			E_COMPILE_ERROR		=>	'Compile Error',
+			E_COMPILE_WARNING	=>	'Compile Warning',
+			E_USER_ERROR		=>	'User Error',
+			E_USER_WARNING		=>	'User Warning',
+			E_USER_NOTICE		=>	'User Notice'
+		);
+
+		// E_STRICT (2048) was deprecated in PHP 8.4 and removed in PHP 9.
+		// Referencing the constant itself triggers a deprecation notice on
+		// PHP 8.4+, so only add it to the map on older versions.
+		if (PHP_VERSION_ID < 80400)
+		{
+			$this->levels[E_STRICT] = 'Runtime Notice';
+		}
+
 		// Note: Do not log messages from this constructor.
 	}
 

@@ -58,7 +58,8 @@ $autoload['packages'] = array();
 |
 |	$autoload['libraries'] = array('user_agent' => 'ua');
 */
-$autoload['libraries'] = array('database');
+// 'auth_lib' => 'auth' exposes the Auth_lib class as $this->auth.
+$autoload['libraries'] = array('database', 'session', 'auth_lib' => 'auth');
 
 /*
 | -------------------------------------------------------------------
@@ -89,7 +90,7 @@ $autoload['drivers'] = array();
 |
 |	$autoload['helper'] = array('url', 'file');
 */
-$autoload['helper'] = array();
+$autoload['helper'] = array('url');
 
 /*
 | -------------------------------------------------------------------
